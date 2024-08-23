@@ -1,3 +1,9 @@
+"""
+This example runs a LLM using RayServe and vLLM on TPUs.
+
+To run this example, run:
+  serve run vllm.examples.rayserve_tpu:build_app
+"""
 from typing import Dict, Optional, List
 import logging
 import json
@@ -58,7 +64,7 @@ class VLLMDeployment:
 
 
 def get_num_tpu_chips() -> int:
-    return ray.cluster_resources()["TPU"]
+    return int(ray.cluster_resources()["TPU"])
 
 
 def build_app(cli_args: Dict[str, str]) -> serve.Application:
