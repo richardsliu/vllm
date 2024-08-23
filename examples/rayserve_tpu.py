@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.responses import Response
 
+import ray
 from ray import serve
 
 from vllm import LLM, SamplingParams
@@ -17,27 +18,26 @@ app = FastAPI()
 
 @serve.deployment(
     num_replicas=1,
-    max_ongoing_requests=10,
 )
-#@serve.ingress(app)
+@serve.ingress(app)
 class VLLMDeployment:
     def __init__(
         self,
+        num_tpu_chips,
     ):
-        self.llm = LLM(model="meta-llama/Meta-Llama-3.1-8B", #model="google/gemma-2b", 
-                       tensor_parallel_size=8,
+        self.llm = LLM(model="meta-llama/Meta-Llama-3.1-8B",
+                       tensor_parallel_size=num_tpu_chips,
                        enforce_eager=True)
 
 
-    async def __call__(self, request: Request) -> Response:
-    #@app.post("/v1/generate")
-    #async def generate(
-    #    self, request: Request
-    #):
+    @app.post("/v1/generate")
+    async def generate(
+        self, request: Request
+    ):
         request_dict = await request.json()
         prompts = request_dict.pop("prompt")
         print("Processing prompt ", prompts)
-        sampling_params = SamplingParams(temperature=0.7, 
+        sampling_params = SamplingParams(temperature=0.7,
                                          top_p=1.0,
                                          n=1,
                                          max_tokens=1000)
@@ -57,22 +57,20 @@ class VLLMDeployment:
         return Response(content=json.dumps(ret))
 
 
-def build_app() -> serve.Application:
-    """Builds the Serve app based on CLI arguments.
-    """  # noqa: E501
-    tp = 8 #engine_args.tensor_parallel_size
-    logger.info(f"Tensor parallelism = {tp}")
+def get_num_tpu_chips() -> int:
+    return ray.cluster_resources()["TPU"]
+
+
+def build_app(cli_args: Dict[str, str]) -> serve.Application:
+    """Builds the Serve app based on CLI arguments."""
+    ray.init()
+    num_tpu_chips = get_num_tpu_chips()
     pg_resources = []
     pg_resources.append({"CPU": 1})  # for the deployment replica
-    for i in range(tp):
+    for i in range(num_tpu_chips):
         pg_resources.append({"CPU": 1, "TPU": 1})  # for the vLLM actors
 
-    # We use the "STRICT_PACK" strategy below to ensure all vLLM actors are placed on
-    # the same Ray node.
+    # Use PACK strategy since the deployment may use more than one TPU node.
     return VLLMDeployment.options(
         placement_group_bundles=pg_resources, placement_group_strategy="PACK"
-    ).bind()
-
-
-deployment = build_app()
-serve.run(deployment)
+    ).bind(num_tpu_chips)
