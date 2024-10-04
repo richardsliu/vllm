@@ -22,7 +22,7 @@ spec:
             - mountPath: /tmp/ray
               name: ray-logs
             name: ray-head
-            image: gcr.io/tpu-vm-gke-testing/vllm:20240830
+            image: gcr.io/tpu-vm-gke-testing/vllm:20241004
             imagePullPolicy: IfNotPresent
             resources:
               limits:
@@ -101,7 +101,7 @@ spec:
               mountPath: /llama
               readOnly: true
             name: ray-worker
-            image: gcr.io/tpu-vm-gke-testing/vllm:20240830
+            image: gcr.io/tpu-vm-gke-testing/vllm:20241004
             imagePullPolicy: IfNotPresent
             resources:
               limits:
