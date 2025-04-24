@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-tpu-decode
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vllm-tpu-decode
+  template:
+    metadata:
+      labels:
+        app: vllm-tpu-decode
+    spec:
+      serviceAccountName: default
+      nodeSelector:
+        cloud.google.com/gke-tpu-topology: 2x4
+        cloud.google.com/gke-tpu-accelerator: tpu-v6e-slice
+      containers:
+      - name: vllm-tpu
+        image: vllm/vllm-tpu:nightly
+        command: [ "/bin/bash", "-c", "--" ]
+        args: [ "while true; do sleep 300; done;" ]
+        #command: ["python3", "-m", "vllm.entrypoints.openai.api_server"]
+        #args:
+        #- --host=0.0.0.0
+        #- --port=8000
+        #- --tensor-parallel-size=1
+        #- --max-model-len=2048 # max input + output len
+        #- --model=meta-llama/Meta-Llama-3.1-8B
+        #- --download-dir=/usr/vllm
+        env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: hf-secret
+              key: hf_api_token
+        ports:
+        - containerPort: 8000
+        resources:
+          limits:
+            google.com/tpu: 8
+        volumeMounts:
+        - name: dshm
+          mountPath: /dev/shm
+      volumes:
+      - name: dshm
+        emptyDir:
+          medium: Memory
