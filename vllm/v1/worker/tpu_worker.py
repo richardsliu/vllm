@@ -14,6 +14,7 @@ import vllm.envs as envs
 from vllm.config import ParallelConfig, VllmConfig
 from vllm.distributed import (ensure_model_parallel_initialized,
                               init_distributed_environment)
+from vllm.distributed.kv_transfer import ensure_kv_transfer_initialized
 from vllm.logger import init_logger
 from vllm.model_executor import set_random_seed
 from vllm.utils import STR_DTYPE_TO_TORCH_DTYPE
@@ -94,7 +95,7 @@ class TPUWorker:
         torch.set_default_dtype(self.model_config.dtype)
 
         # Initialize the distributed environment.
-        init_tpu_worker_distributed_environment(self.parallel_config,
+        init_tpu_worker_distributed_environment(self.vllm_config,
                                                 self.rank,
                                                 self.distributed_init_method,
                                                 self.local_rank)
@@ -238,13 +239,13 @@ class TPUWorker:
 
 
 def init_tpu_worker_distributed_environment(
-    parallel_config: ParallelConfig,
+    vllm_config: VllmConfig,
     rank: int,
     distributed_init_method: Optional[str] = None,
     local_rank: int = -1,
 ) -> None:
     """Initialize the distributed environment."""
-
+    parallel_config = vllm_config.parallel_config
     # NOTE(woosuk): This is just to initialize the TP group and broadcast
     # the input objects on CPU. The all-reduce and all-gather ops on TPU
     # are invoked by `xm.all_reduce` and `xm.all_gather` which use their
@@ -258,3 +259,4 @@ def init_tpu_worker_distributed_environment(
     )
     ensure_model_parallel_initialized(parallel_config.tensor_parallel_size,
                                       parallel_config.pipeline_parallel_size)
+    ensure_kv_transfer_initialized(vllm_config)
