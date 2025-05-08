@@ -28,4 +28,6 @@ RUN python3 -m pip install -e .
 # install development dependencies (for testing)
 RUN python3 -m pip install -e tests/vllm_test_utils
 
+RUN python3 -m pip install nixl
+
 CMD ["/bin/bash"]
