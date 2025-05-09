@@ -199,7 +199,8 @@ class NixlConnectorScheduler:
                                  blocks: "KVCacheBlocks",
                                  num_external_tokens: int):
         if request.do_remote_decode:
-            self._reqs_need_send[request.request_id] = (request, block_ids)
+            self._reqs_need_send[request.request_id] = (request,
+                                                        blocks.get_block_ids())
         if request.do_remote_prefill and num_external_tokens > 0:
             self._reqs_need_recv[request.request_id] = (request,
                                                         blocks.get_block_ids())
