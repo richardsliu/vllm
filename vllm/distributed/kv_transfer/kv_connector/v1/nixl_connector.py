@@ -734,7 +734,7 @@ class NixlConnectorWorker:
                 transfers[req_id] = running_reqs
         return done_req_ids
 
-   def save_kv(self, metadata: NixlConnectorMetadata):
+    def save_kv(self, metadata: NixlConnectorMetadata):
         for req_id, meta in metadata.requests.items():
             if not meta.do_remote_decode:
                 continue
